@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if order %}Заказ {{ order.order_number }}{% else %}Новый заказ{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>
+        {% if order %}
+            {% if editable %}📝 Редактирование{% else %}👁️ Просмотр{% endif %} заказа {{ order.order_number }}
+        {% endif %}
+    </h2>
+</div>
+
+<form method="POST" class="order-form">
+    <div class="form-section">
+        <h3>Информация о клиенте</h3>
+        
+        <div class="info-row">
+            <div class="info-item">
+                <label>Имя клиента:</label>
+                <div class="info-value">{{ order.client.name }}</div>
+            </div>
+            
+            <div class="info-item">
+                <label>Email:</label>
+                <div class="info-value">{{ order.client.email }}</div>
+            </div>
+            
+            <div class="info-item">
+                <label>Телефон:</label>
+                <div class="info-value">{{ order.client.phone_number }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h3>Информация о заказе</h3>
+        
+        <div class="info-row">
+            <div class="info-item">
+                <label>Номер заказа:</label>
+                <div class="info-value"><strong>{{ order.order_number }}</strong></div>
+            </div>
+            
+            <div class="info-item">
+                <label>Дата заказа:</label>
+                <div class="info-value">
+                    {% if order.date_of_order %}
+                        {{ order.date_of_order.strftime('%d.%m.%Y') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="shop_id">Магазин:</label>
+                <select id="shop_id" name="shop_id" {% if not editable %}disabled{% endif %}>
+                    <option value="">Не выбран</option>
+                    {% for shop in shops %}
+                    <option value="{{ shop.id }}" 
+                            {% if order.shop_id == shop.id %}selected{% endif %}>
+                        {{ shop.name }} - {{ shop.address }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            {% if user_type == 'staff' %}
+            <div class="form-group">
+                <label for="worker_id">Сотрудник:</label>
+                <select id="worker_id" name="worker_id" {% if not editable %}disabled{% endif %}>
+                    <option value="">Не выбран</option>
+                    {% for worker in workers %}
+                    <option value="{{ worker.id }}"
+                            {% if order.receipt and order.receipt.shop_workerid == worker.id %}selected{% endif %}>
+                        {{ worker.name }} ({{ worker.position }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="total_price">Общая сумма (₽):</label>
+                <input type="number" id="total_price" name="total_price" step="0.01" min="0"
+                       value="{{ order.total_price if order.total_price else 0 }}" 
+                       {% if not editable %}readonly{% endif %}>
+            </div>
+            
+            {% if user_type == 'staff' %}
+            <div class="form-group">
+                <label for="status">Статус заказа:</label>
+                <select id="status" name="status" {% if not editable %}disabled{% endif %}>
+                    <option value="Новый" {% if order.status == 'Новый' %}selected{% endif %}>Новый</option>
+                    <option value="Ожидает подтверждения" {% if order.status == 'Ожидает подтверждения' %}selected{% endif %}>Ожидает подтверждения</option>
+                    <option value="В обработке" {% if order.status == 'В обработке' %}selected{% endif %}>В обработке</option>
+                    <option value="Готов к выдаче" {% if order.status == 'Готов к выдаче' %}selected{% endif %}>Готов к выдаче</option>
+                    <option value="Выдан" {% if order.status == 'Выдан' %}selected{% endif %}>Выдан</option>
+                    <option value="Отменен" {% if order.status == 'Отменен' %}selected{% endif %}>Отменен</option>
+                </select>
+            </div>
+            {% else %}
+            <div class="info-item">
+                <label>Статус:</label>
+                <div class="info-value">
+                    <span class="status status-{{ order.status.lower().replace(' ', '-') }}">
+                        {{ order.status }}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if ordered_items %}
+    <div class="form-section">
+        <h3>Состав заказа</h3>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Товар</th>
+                    <th>Количество</th>
+                    <th>Цена за ед.</th>
+                    <th>Сумма</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in ordered_items %}
+                <tr>
+                    <td>{{ item.invoice.good.name if item.invoice and item.invoice.good else 'Товар не указан' }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ "%.2f"|format(item.price_per_unit|float) }} ₽</td>
+                    <td>{{ "%.2f"|format(item.subtotal|float) }} ₽</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if order.receipt %}
+    <div class="form-section">
+        <h3>Информация о чеке</h3>
+        
+        <div class="info-row">
+            <div class="info-item">
+                <label>Номер чека:</label>
+                <div class="info-value"><strong>{{ order.receipt.receipt_number }}</strong></div>
+            </div>
+            
+            <div class="info-item">
+                <label>Дата выдачи:</label>
+                <div class="info-value">
+                    {% if order.receipt.date_oforder %}
+                        {{ order.receipt.date_oforder.strftime('%d.%m.%Y') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="payment_method">Способ оплаты:</label>
+                {% if user_type == 'staff' and editable %}
+                <select id="payment_method" name="payment_method">
+                    <option value="Не оплачен" {% if order.receipt.payment_method == 'Не оплачен' %}selected{% endif %}>Не оплачен</option>
+                    <option value="Наличные" {% if order.receipt.payment_method == 'Наличные' %}selected{% endif %}>Наличные</option>
+                    <option value="Карта" {% if order.receipt.payment_method == 'Карта' %}selected{% endif %}>Банковская карта</option>
+                    <option value="Онлайн" {% if order.receipt.payment_method == 'Онлайн' %}selected{% endif %}>Онлайн оплата</option>
+                    <option value="Перевод" {% if order.receipt.payment_method == 'Перевод' %}selected{% endif %}>Банковский перевод</option>
+                    <option value="Возврат" {% if order.receipt.payment_method == 'Возврат' %}selected{% endif %}>Возврат</option>
+                </select>
+                {% else %}
+                <div class="info-value">{{ order.receipt.payment_method }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="info-item">
+                <label>Сотрудник:</label>
+                <div class="info-value">
+                    {% if order.receipt.worker %}
+                        {{ order.receipt.worker.name }}
+                    {% else %}
+                        Не указан
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="form-actions">
+        {% if editable and user_type == 'staff' %}
+            <button type="submit" class="btn btn-success">Сохранить изменения</button>
+        {% endif %}
+        <a href="{{ url_for('staff_orders') if user_type == 'staff' else url_for('customer_orders') }}" 
+           class="btn">Назад</a>
+    </div>
+</form>
+{% endblock %}

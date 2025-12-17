@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Создание нового заказа{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>➕ Создание нового заказа</h2>
+</div>
+
+<form method="POST" class="order-form">
+    <div class="form-section">
+        <h3>Информация о клиенте</h3>
+        
+        <div class="form-group">
+            <label for="client_search">Поиск клиента:</label>
+            <input type="text" id="client_search" placeholder="Введите имя, email или телефон">
+            <div id="client_results" class="search-results"></div>
+        </div>
+        
+        <div class="form-group">
+            <label for="client_name">Имя клиента: <span class="required">*</span></label>
+            <input type="text" id="client_name" name="client_name" required>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="client_email">Email: <span class="required">*</span></label>
+                <input type="email" id="client_email" name="client_email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="client_phone">Телефон: <span class="required">*</span></label>
+                <input type="tel" id="client_phone" name="client_phone" required>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h3>Информация о заказе</h3>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="shop_id">Магазин:</label>
+                <select id="shop_id" name="shop_id">
+                    <option value="">Не выбран</option>
+                    {% for shop in shops %}
+                    <option value="{{ shop.id }}">{{ shop.name }} - {{ shop.address }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="worker_id">Сотрудник:</label>
+                <select id="worker_id" name="worker_id">
+                    <option value="">Не выбран</option>
+                    {% for worker in workers %}
+                    <option value="{{ worker.id }}">{{ worker.name }} ({{ worker.position }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="total_price">Общая сумма (₽): <span class="required">*</span></label>
+                <input type="number" id="total_price" name="total_price" step="0.01" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="status">Статус: <span class="required">*</span></label>
+                <select id="status" name="status" required>
+                    <option value="Новый" selected>Новый</option>
+                    <option value="Ожидает подтверждения">Ожидает подтверждения</option>
+                    <option value="В обработке">В обработке</option>
+                    <option value="Готов к выдаче">Готов к выдаче</option>
+                    <option value="Выдан">Выдан</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h3>Оплата</h3>
+        
+        <div class="form-group">
+            <label for="payment_method">Способ оплаты:</label>
+            <select id="payment_method" name="payment_method">
+                <option value="Не оплачен">Не оплачен</option>
+                <option value="Наличные">Наличные</option>
+                <option value="Карта">Банковская карта</option>
+                <option value="Онлайн">Онлайн оплата</option>
+                <option value="Перевод">Банковский перевод</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-success">Создать заказ</button>
+        <a href="{{ url_for('staff_orders') }}" class="btn">Отмена</a>
+    </div>
+</form>
+
+<script>
+// Поиск клиентов
+let searchTimeout;
+const clientSearch = document.getElementById('client_search');
+const clientResults = document.getElementById('client_results');
+
+clientSearch.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value;
+    
+    if (query.length < 2) {
+        clientResults.innerHTML = '';
+        return;
+    }
+    
+    searchTimeout = setTimeout(() => {
+        fetch(`/api/clients/search?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(clients => {
+                if (clients.length > 0) {
+                    clientResults.innerHTML = clients.map(client => `
+                        <div class="search-result-item" data-id="${client.id}" 
+                             data-name="${client.name}" 
+                             data-email="${client.email}"
+                             data-phone="${client.phone}">
+                            <strong>${client.name}</strong><br>
+                            <small>${client.email} | ${client.phone}</small>
+                        </div>
+                    `).join('');
+                    
+                    // Добавляем обработчики клика
+                    document.querySelectorAll('.search-result-item').forEach(item => {
+                        item.addEventListener('click', function() {
+                            document.getElementById('client_name').value = this.dataset.name;
+                            document.getElementById('client_email').value = this.dataset.email;
+                            document.getElementById('client_phone').value = this.dataset.phone;
+                            clientResults.innerHTML = '';
+                            clientSearch.value = '';
+                        });
+                    });
+                } else {
+                    clientResults.innerHTML = '<div class="search-no-results">Клиенты не найдены</div>';
+                }
+            });
+    }, 300);
+});
+
+// Закрытие результатов при клике вне области
+document.addEventListener('click', function(e) {
+    if (!clientSearch.contains(e.target) && !clientResults.contains(e.target)) {
+        clientResults.innerHTML = '';
+    }
+});
+</script>
+{% endblock %}
