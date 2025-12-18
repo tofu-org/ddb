@@ -1,14 +1,54 @@
 import os
 
 class Config:
-    # Параметры подключения к PostgreSQL
-    DB_HOST = os.environ.get('DB_HOST', 'localhost')
-    DB_PORT = os.environ.get('DB_PORT', '5432')
-    DB_NAME = os.environ.get('DB_NAME', 'your_database_name')
-    DB_USER = os.environ.get('DB_USER', 'your_username')
-    DB_PASSWORD = os.environ.get('DB_PASSWORD', 'your_password')
+    # Выбор узла базы данных в зависимости от переменной окружения
+    NODE = os.getenv('NODE', 'shop1')
     
-    # Для psycopg3 используем postgresql+psycopg
-    SQLALCHEMY_DATABASE_URI = f'postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+    # Настройки подключения для разных узлов
+    DATABASE_CONFIGS = {
+        'administration': {
+            'host': 'localhost',
+            'port': 5000,
+            'user': 'admin',
+            'password': 'pass',
+            'database': 'vinlab'
+        },
+        'shop1': {
+            'host': 'localhost',
+            'port': 5001,
+            'user': 'shop1',
+            'password': 'pass',
+            'database': 'vinlab'
+        },
+        'shop2': {
+            'host': 'localhost',
+            'port': 5002,
+            'user': 'shop2',
+            'password': 'pass',
+            'database': 'vinlab'
+        },
+        'warehouse1': {
+            'host': 'localhost',
+            'port': 5011,
+            'user': 'warehouse1',
+            'password': 'pass',
+            'database': 'vinlab'
+        },
+        'warehouse2': {
+            'host': 'localhost',
+            'port': 5012,
+            'user': 'warehouse2',
+            'password': 'pass',
+            'database': 'vinlab'
+        }
+    }
+    
+    # Формирование строки подключения
+    db_config = DATABASE_CONFIGS[NODE]
+    SQLALCHEMY_DATABASE_URI = (
+        f"postgresql://{db_config['user']}:{db_config['password']}"
+        f"@{db_config['host']}:{db_config['port']}/{db_config['database']}"
+    )
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    SECRET_KEY = 'your-secret-key-here-change-in-production'
