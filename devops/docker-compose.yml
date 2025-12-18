@@ -1,0 +1,140 @@
+version: "3.9"
+
+services:
+  administration:
+    image: postgres:17-alpine
+    container_name: administration
+    command: >
+      postgres 
+      -c wal_level=logical 
+      -c max_replication_slots=10 
+      -c max_wal_senders=10
+      -c listen_addresses='*'
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: vinlab
+    ports:
+      - "5000:5432"
+    volumes:
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/00-init.sql
+      - ./migrations/admin/replica.sql:/docker-entrypoint-initdb.d/01-replica.sql
+      - ./migrations/admin/insert.sql:/docker-entrypoint-initdb.d/02-insert.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d admin_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  shop1:
+    image: postgres:17-alpine
+    container_name: shop1
+    command: >
+      postgres 
+      -c wal_level=logical 
+      -c max_replication_slots=10 
+      -c max_wal_senders=10
+      -c listen_addresses='*'
+    environment:
+      POSTGRES_USER: shop1
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: vinlab
+    ports:
+      - "5001:5432"
+    volumes:
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/00-init.sql
+      - ./migrations/shop1/replica.sql:/docker-entrypoint-initdb.d/01-sub.sql
+    depends_on:
+      administration:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shop1 -d shop1_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  shop2:
+    image: postgres:17-alpine
+    container_name: shop2
+    command: >
+      postgres 
+      -c wal_level=logical 
+      -c max_replication_slots=10 
+      -c max_wal_senders=10
+      -c listen_addresses='*'
+    environment:
+      POSTGRES_USER: shop2
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: vinlab
+    ports:
+      - "5002:5432"
+    volumes:
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/00-init.sql
+      - ./migrations/shop2/replica.sql:/docker-entrypoint-initdb.d/01-sub.sql
+    depends_on:
+      administration:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shop2 -d shop2_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  warehouse1:
+    image: postgres:17-alpine
+    container_name: warehouse1
+    command: >
+      postgres 
+      -c wal_level=logical 
+      -c max_replication_slots=10 
+      -c max_wal_senders=10
+      -c listen_addresses='*'
+    environment:
+      POSTGRES_USER: warehouse1
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: vinlab
+    ports:
+      - "5011:5432"
+    volumes:
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/00-init.sql
+      - ./migrations/warehouse1/replica.sql:/docker-entrypoint-initdb.d/01-sub.sql
+    depends_on:
+      administration:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shop1 -d shop1_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  warehouse2:
+    image: postgres:17-alpine
+    container_name: warehouse2
+    command: >
+      postgres 
+      -c wal_level=logical 
+      -c max_replication_slots=10 
+      -c max_wal_senders=10
+      -c listen_addresses='*'
+    environment:
+      POSTGRES_USER: warehouse2
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: vinlab
+    ports:
+      - "5012:5432"
+    volumes:
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/00-init.sql
+      - ./migrations/warehouse2/replica.sql:/docker-entrypoint-initdb.d/01-sub.sql
+    depends_on:
+      administration:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shop2 -d shop2_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
